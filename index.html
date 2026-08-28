@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Idle Tycoon — Construction Blueprint</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header id="hud"></header>
+      <main id="layout">
+        <section id="panel" aria-label="Building management"></section>
+        <section id="mapview" aria-label="Site map"></section>
+        <section id="techview" aria-label="Technology tree"></section>
+      </main>
+      <footer id="status"></footer>
+      <div id="toast" role="status" aria-live="polite"></div>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
