@@ -39,3 +39,92 @@ export function fmtErr(code: string): string {
       return code;
   }
 }
+
+let tipEl: HTMLElement | null = null;
+let currentTip: Element | null = null;
+
+const SHOW_DELAY = 450;
+const MOVE_TOL = 3;
+let showTimer: ReturnType<typeof setTimeout> | null = null;
+let lastX = 0;
+let lastY = 0;
+
+export function initTooltips(): void {
+  if (tipEl) return;
+  const tip = document.createElement('div');
+  tip.className = 'tip';
+  document.body.append(tip);
+  tipEl = tip;
+
+  const cancel = (): void => {
+    if (showTimer) {
+      clearTimeout(showTimer);
+      showTimer = null;
+    }
+  };
+
+  const place = (x: number, y: number): void => {
+    const { innerWidth, innerHeight } = window;
+    const pad = 14;
+    const r = tip.getBoundingClientRect();
+    let px = x + 14;
+    let py = y + 18;
+    if (px + r.width + pad > innerWidth) px = x - r.width - 12;
+    if (py + r.height + pad > innerHeight) py = y - r.height - 10;
+    tip.style.left = `${px}px`;
+    tip.style.top = `${py}px`;
+  };
+
+  const arm = (e: PointerEvent): void => {
+    cancel();
+    lastX = e.clientX;
+    lastY = e.clientY;
+    showTimer = setTimeout(() => {
+      showTimer = null;
+      if (!currentTip) return;
+      const text = currentTip.getAttribute('data-tip');
+      if (!text) return;
+      tip.textContent = text;
+      tip.classList.add('show');
+      place(lastX, lastY);
+    }, SHOW_DELAY);
+  };
+
+  const hide = (): void => {
+    tip.classList.remove('show');
+  };
+
+  const over = (e: PointerEvent): void => {
+    const t = (e.target as Element).closest('[data-tip]');
+    if (t === currentTip) return;
+    currentTip = t;
+    if (t) {
+      arm(e);
+    } else {
+      cancel();
+      hide();
+    }
+  };
+
+  const move = (e: PointerEvent): void => {
+    if (tip.classList.contains('show')) {
+      place(e.clientX, e.clientY);
+      return;
+    }
+    if (!currentTip) return;
+    const dist = Math.hypot(e.clientX - lastX, e.clientY - lastY);
+    if (dist > MOVE_TOL) arm(e);
+  };
+
+  const out = (e: PointerEvent): void => {
+    const to = e.relatedTarget as Element | null;
+    if (to && to.closest('[data-tip]')) return;
+    currentTip = null;
+    cancel();
+    hide();
+  };
+
+  document.addEventListener('pointerover', over);
+  document.addEventListener('pointermove', move);
+  document.addEventListener('pointerout', out);
+}

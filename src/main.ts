@@ -1,5 +1,6 @@
 import { fmtDuration } from './format';
 import { createStore } from './store';
+import { initTooltips } from './ui/dom';
 import { mountHud } from './ui/hud';
 import { mountMap } from './ui/map';
 import { mountPanel } from './ui/panel';
@@ -7,6 +8,7 @@ import { mountTechTree } from './ui/techTree';
 import { showToast } from './ui/toast';
 
 const store = createStore();
+initTooltips();
 
 document.getElementById('hud')!.append(mountHud(store));
 document.getElementById('panel')!.append(mountPanel(store));
@@ -23,6 +25,7 @@ status.append(group, resetBtn);
 group.append(stCap, stOff);
 resetBtn.className = 'btn';
 resetBtn.textContent = 'Reset site';
+resetBtn.dataset.tip = 'Wipe all local progress and start a new game. This cannot be undone.';
 resetBtn.addEventListener('click', () => {
   if (confirm('Discard local progress and start from scratch?')) {
     store.reset();
@@ -32,10 +35,13 @@ resetBtn.addEventListener('click', () => {
 
 const capMs = store.config.offline.maxHours * 3_600_000;
 stCap.textContent = `AWAY MAX ${fmtDuration(capMs)}`;
+stCap.dataset.tip =
+  'AWAY MAX — the longest stay-away (offline) break that is simulated when you come back. Anything longer is capped.';
 
 function paintStatus(): void {
   const cp = store.state.techs['quantum_core'] ? 2 : 1;
   stOff.textContent = `OFFLINE CAP ${fmtDuration(capMs * cp)}`;
+  stOff.dataset.tip = `Current offline simulation limit: ${fmtDuration(capMs * cp)}. Doubled once Quantum Core is unlocked.`;
 }
 store.subscribe(paintStatus);
 paintStatus();

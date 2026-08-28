@@ -597,6 +597,46 @@ body {
   color: var(--ink);
 }
 
+/* ---------- Tooltip ---------- */
+
+[data-tip] {
+  cursor: help;
+}
+
+.btn[data-tip] {
+  cursor: pointer;
+}
+
+.tip {
+  position: fixed;
+  z-index: 80;
+  max-width: 340px;
+  padding: 7px 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--bg3);
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.45;
+  letter-spacing: 0.02em;
+  text-transform: none;
+  box-shadow: 0 0 0 2px var(--hint), 0 0 20px rgba(116, 200, 255, 0.18);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.1s;
+}
+
+.tip.show {
+  opacity: 1;
+}
+
+.tip::before {
+  content: '';
+  position: absolute;
+  inset: -3px;
+  border: 1px dashed var(--faint);
+  pointer-events: none;
+}
+
 /* ---------- Scrollbars ---------- */
 
 ::-webkit-scrollbar {

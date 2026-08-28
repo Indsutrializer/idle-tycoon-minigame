@@ -16,6 +16,18 @@ const RTREE: Record<string, string> = {
   research: 'RES',
 };
 
+const RES_FULL: Record<string, string> = {
+  money: 'Credits (CRD)',
+  energy: 'Energy (ENR)',
+  research: 'Research (RES)',
+};
+
+const COL_TIP: Record<string, string> = {
+  Energy: 'Power track — generators and their upgrades.',
+  Production: 'Production track — turning energy into credits.',
+  Expansion: 'Expansion track — new units and global multipliers.',
+};
+
 export function mountTechTree(store: Store): HTMLElement {
   const root = el('section', { class: 'techpane' });
   const header = el('div', { class: 'pane-title' }, 'TECHNOLOGY PLAN');
@@ -43,7 +55,7 @@ export function mountTechTree(store: Store): HTMLElement {
     const cols = new Map<number, string>();
     for (const t of techs) cols.set(t.tileX, t.tree);
     for (const [idx, label] of cols) {
-      colLabels.push(`<text class="tlabel" x="${PAD_X + idx * COL_W + NODE_W / 2}" y="18" text-anchor="middle">${label.toUpperCase()}</text>`);
+      colLabels.push(`<text class="tlabel" x="${PAD_X + idx * COL_W + NODE_W / 2}" y="18" text-anchor="middle" data-tip="${COL_TIP[label] ?? ''}">${label.toUpperCase()}</text>`);
     }
 
     const edges: string[] = [];
@@ -67,9 +79,13 @@ export function mountTechTree(store: Store): HTMLElement {
       const cls = unlocked ? 'unlocked' : ready ? 'ready' : 'locked';
       const stateMark = unlocked ? '✓' : ready ? '▸' : '◻';
       const costCls = Math.floor(store.state.resources[t.cost.resource] ?? 0) >= t.cost.amount ? '' : 'short';
+      const stateWord = unlocked ? 'Already applied.' : ready ? 'Ready — click to unlock.' : 'Locked.';
+      const req = t.requires.length > 0 ? ` Requires: ${t.requires.join(', ')}.` : '';
+      const costLine = unlocked ? '' : ` Cost: ${fmtAmount(t.cost.amount)} ${RES_FULL[t.cost.resource]}.`;
+      const tip = `${t.name}. ${stateWord} ${t.description}${costLine}${req}`;
       const x = cx(t);
       const y = cy(t);
-      return `<g class="tnode ${cls}" data-tech="${t.id}" transform="translate(${x},${y})">
+      return `<g class="tnode ${cls}" data-tech="${t.id}" data-tip="${tip}" transform="translate(${x},${y})">
         <rect class="tframe" width="${NODE_W}" height="${NODE_H}" rx="1"/>
         <line class="tcorner" x1="0" y1="0" x2="8" y2="0"/>
         <line class="tcorner" x1="0" y1="0" x2="0" y2="8"/>

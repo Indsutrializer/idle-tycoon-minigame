@@ -26,6 +26,12 @@ const ACCENT: Record<string, GlyphName> = {
   lab: 'lab',
 };
 
+const OUT_FULL: Record<string, string> = {
+  money: 'Credits (CRD)',
+  energy: 'Energy (ENR)',
+  research: 'Research (RES)',
+};
+
 const PRODUCERS = ['collector', 'wind_turbine'];
 const CONSUMERS = ['refinery', 'lab'];
 
@@ -75,7 +81,7 @@ export function mountMap(store: Store): HTMLElement {
       </g>`;
 
     const compass = `
-      <g class="compass" transform="translate(${VIEW_W - 44},44)">
+      <g class="compass" data-tip="Compass — plan orientation, north up." transform="translate(${VIEW_W - 44},44)">
         <circle r="16"/>
         <path d="M0 -11 L3 0 L0 11 L-3 0z" class="n"/>
         <text y="-22" text-anchor="middle" class="dimlabel">N</text>
@@ -90,7 +96,7 @@ export function mountMap(store: Store): HTMLElement {
 
     const flows = renderFlows(state);
     const cajetin = `
-      <g class="cajetin" transform="translate(${VIEW_W - 186},${VIEW_H - 66})">
+      <g class="cajetin" data-tip="Title block — project, drawing, scale and sheet for this plan." transform="translate(${VIEW_W - 186},${VIEW_H - 66})">
         <rect width="166" height="48" />
         <text x="8" y="16">IDLE TYCOON</text>
         <text x="8" y="30">DWG 01 — SITE ALPHA</text>
@@ -98,7 +104,7 @@ export function mountMap(store: Store): HTMLElement {
       </g>`;
 
     const siteTitle = `
-      <text class="maptitle" x="30" y="16">SITE 01 — PLAN VIEW</text>`;
+      <text class="maptitle" x="30" y="16" data-tip="Site 01 — top-down plan view of the operation.">SITE 01 — PLAN VIEW</text>`;
 
     wrap.innerHTML = `
       <svg class="mapboard" viewBox="0 0 ${VIEW_W} ${VIEW_H}" role="img" aria-label="Site map">
@@ -125,8 +131,10 @@ export function mountMap(store: Store): HTMLElement {
     const glyph = ACCENT[b.icon] ?? 'solar';
     const out = OUT_LABEL[b.output as keyof typeof OUT_LABEL] ?? '';
 
+    let tip: string;
     let body = '';
     if (active) {
+      tip = `${b.name} — plot ${b.plot}, LVL ${level}. Produces ${OUT_FULL[b.output]}; hover the panel on the left for exact rates.`;
       const hatch = diag(p, level);
       body = `
         <rect class="plot plot--active" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}"/>
@@ -134,16 +142,18 @@ export function mountMap(store: Store): HTMLElement {
         <g transform="translate(${cx - 30},${cy - 34}) scale(2.5)" class="plot-icon level-${Math.min(level, 6)}">${GLYPHS[glyph]}</g>
         <text class="plot-level" x="${cx}" y="${p.y + p.h - 8}" text-anchor="middle">LVL ${level}</text>`;
     } else if (unlocked) {
+      tip = `${b.name} — plot ${b.plot}. Unlocked and standing by: build it in the Production panel.`;
       body = `<rect class="plot plot--idle" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}"/>
         <text class="plot-empty" x="${cx}" y="${cy + 4}" text-anchor="middle">STANDBY</text>`;
     } else {
+      tip = `${b.name} — plot ${b.plot}. Reserved: not available until it is unlocked in the Technology Plan.`;
       body = `<rect class="plot plot--reserved" x="${p.x}" y="${p.y}" width="${p.w}" height="${p.h}"/>
         <text class="plot-empty" x="${cx}" y="${cy}" text-anchor="middle">AREA</text>
         <text class="plot-empty" x="${cx}" y="${cy + 14}" text-anchor="middle">RESERVED</text>`;
     }
 
     return `
-      <g class="plotg">
+      <g class="plotg" data-tip="${tip}">
         ${body}
         <g class="plot-corners">
           ${corner(p.x, p.y)}${corner(p.x + p.w, p.y)}${corner(p.x, p.y + p.h)}${corner(p.x + p.w, p.y + p.h)}
@@ -170,7 +180,7 @@ export function mountMap(store: Store): HTMLElement {
         const y2 = z.y + z.h / 2;
         const my = (y1 + y2) / 2;
         paths.push(
-          `<path class="flow" d="M${x1},${y1} C${x1 + 26},${my} ${x2 - 26},${my} ${x2},${y2}" marker-end="url(#arrow)"/>`,
+          `<path class="flow" data-tip="${defP.name} sends energy to ${defC.name} (dashed animated line)." d="M${x1},${y1} C${x1 + 26},${my} ${x2 - 26},${my} ${x2},${y2}" marker-end="url(#arrow)"/>`,
         );
       }
     }

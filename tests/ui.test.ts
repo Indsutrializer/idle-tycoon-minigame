@@ -48,6 +48,10 @@ describe('ui smoke', () => {
 
     expect(panel.innerHTML).toContain('Solar Collector');
     expect(panel.innerHTML).toContain('data-action="buy"');
+    expect(hud.querySelector('.res')?.getAttribute('data-tip')).toBeTruthy();
+    expect(hud.querySelector('.hud-brand')?.getAttribute('data-tip')).toBeTruthy();
+    expect(tech.innerHTML).toContain('data-tip');
+    expect(map.innerHTML).toContain('data-tip');
     expect(tech.innerHTML).toContain('tnode');
     expect(map.innerHTML).toContain('plot');
 
