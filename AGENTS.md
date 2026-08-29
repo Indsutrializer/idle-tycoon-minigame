@@ -26,7 +26,7 @@ Run `pnpm run typecheck && pnpm test && pnpm build` before finishing a change.
 
 ## Conventions
 
-- **No code comments.** Do not add them.
+- **Only Comments to Doc Functions.** Do not add extra comments.
 - TypeScript strict + `noUncheckedIndexedAccess`; handle `undefined` from index access.
 - **Core stays pure**: pass `state`/`config` explicitly, return new states (immutable transitions). No side effects.
 - Game content and UI text are in **English** (currency codes: `CRD`/`ENR`/`RES`). Error codes are `SCREAMING_SNAKE_CASE` strings matched by `fmtErr` in `src/ui/dom.ts`.
