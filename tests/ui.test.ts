@@ -6,6 +6,7 @@ import type { SavedGame } from '../src/core/types';
 import { mountHud } from '../src/ui/hud';
 import { mountMap } from '../src/ui/map';
 import { mountPanel } from '../src/ui/panel';
+import { setupPanZoom } from '../src/ui/panzoom';
 import { mountTechTree } from '../src/ui/techTree';
 
 class MemStorage implements Storage {
@@ -34,6 +35,69 @@ beforeEach(() => {
   Object.defineProperty(globalThis, 'localStorage', {
     value: new MemStorage(),
     configurable: true,
+  });
+});
+
+describe('panzoom', () => {
+  const SVG_NS = 'http://www.w3.org/2000/svg';
+
+  it('zooms in/out and fits, updating the viewBox', () => {
+    const host = document.createElement('div');
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    host.append(svg);
+    const pan = setupPanZoom({ svg, host, baseW: 1000, baseH: 600 });
+    pan.apply();
+    expect(svg.getAttribute('viewBox')).toBe('0 0 1000 600');
+
+    pan.zoomBy(2);
+    expect(svg.getAttribute('viewBox')).toBe('250 150 500 300');
+
+    pan.zoomBy(0.5);
+    expect(svg.getAttribute('viewBox')).toBe('0 0 1000 600');
+
+    pan.reset();
+    expect(svg.getAttribute('viewBox')).toBe('0 0 1000 600');
+  });
+
+  it('clamps magnifier and exposure limits', () => {
+    const host = document.createElement('div');
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    host.append(svg);
+    const pan = setupPanZoom({ svg, host, baseW: 100, baseH: 100, maxScale: 4 });
+    pan.zoomBy(10_000);
+    expect(svg.getAttribute('viewBox')).toBe('37.5 37.5 25 25');
+    pan.reset();
+    expect(svg.getAttribute('viewBox')).toBe('0 0 100 100');
+  });
+
+  it('renders visible zoom controls', () => {
+    const host = document.createElement('div');
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    host.append(svg);
+    setupPanZoom({ svg, host, baseW: 100, baseH: 100 });
+    expect(host.querySelector('.zoomc')).toBeTruthy();
+    expect(host.querySelectorAll('.zoomc-btn').length).toBe(3);
+  });
+
+  it('updates the zoom label when zoomed', () => {
+    const host = document.createElement('div');
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    host.append(svg);
+    const pan = setupPanZoom({ svg, host, baseW: 100, baseH: 100 });
+    pan.zoomBy(2);
+    expect(host.querySelector('.zoomc-val')?.textContent).toBe('200%');
+  });
+
+  it('preserves fits through a re-render that replaces board content', () => {
+    const host = document.createElement('div');
+    const svg = document.createElementNS(SVG_NS, 'svg');
+    host.append(svg);
+    const pan = setupPanZoom({ svg, host, baseW: 500, baseH: 500 });
+    pan.zoomBy(2);
+    const zoomed = svg.getAttribute('viewBox');
+    svg.innerHTML = '<rect width="10" height="10"/>';
+    pan.apply();
+    expect(svg.getAttribute('viewBox')).toBe(zoomed);
   });
 });
 

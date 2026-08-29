@@ -2,6 +2,9 @@ import { fmtAmount } from '../format';
 import type { Store } from '../store';
 import { el, fmtErr } from './dom';
 import { showToast } from './toast';
+import { setupPanZoom } from './panzoom';
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
 
 const NODE_W = 210;
 const NODE_H = 62;
@@ -33,6 +36,17 @@ export function mountTechTree(store: Store): HTMLElement {
   const header = el('div', { class: 'pane-title' }, 'TECHNOLOGY PLAN');
   const wrap = el('div', { class: 'tech-scroll' });
   root.append(header, wrap);
+  const techs = store.config.techs;
+  const maxCol = Math.max(...techs.map((t) => t.tileX));
+  const maxRow = Math.max(...techs.map((t) => t.tileY));
+  const boardW = PAD_X + (maxCol + 1) * COL_W + 20;
+  const boardH = PAD_Y + (maxRow + 2) * ROW_H;
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('class', 'techboard');
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', 'Technology tree');
+  wrap.append(svg);
+  const pan = setupPanZoom({ svg, host: wrap, baseW: boardW, baseH: boardH, initialScale: 2.4 });
   let lastGen = -1;
 
   store.subscribe(() => {
@@ -43,11 +57,6 @@ export function mountTechTree(store: Store): HTMLElement {
   render();
 
   function render(): void {
-    const techs = store.config.techs;
-    const maxCol = Math.max(...techs.map((t) => t.tileX));
-    const maxRow = Math.max(...techs.map((t) => t.tileY));
-    const width = PAD_X + (maxCol + 1) * COL_W + 20;
-    const height = PAD_Y + (maxRow + 2) * ROW_H;
     const cx = (t: { tileX: number }) => PAD_X + t.tileX * COL_W;
     const cy = (t: { tileY: number }) => PAD_Y + t.tileY * ROW_H;
 
@@ -96,18 +105,17 @@ export function mountTechTree(store: Store): HTMLElement {
       </g>`;
     });
 
-    wrap.innerHTML = `
-      <svg class="techboard" viewBox="0 0 ${width} ${height}" role="img" aria-label="Technology tree">
+    svg.innerHTML = `
         <defs>
           <pattern id="techgrid" width="26" height="26" patternUnits="userSpaceOnUse">
             <circle cx="1" cy="1" r="1" fill="var(--fainter)"/>
           </pattern>
         </defs>
-        <rect width="${width}" height="${height}" fill="url(#techgrid)"/>
+        <rect width="${boardW}" height="${boardH}" fill="url(#techgrid)"/>
         ${colLabels.join('')}
         ${edges.join('')}
-        ${nodes.join('')}
-      </svg>`;
+        ${nodes.join('')}`;
+    pan.apply();
   }
 
   wrap.addEventListener('click', (e) => {

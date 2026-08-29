@@ -126,6 +126,7 @@ body {
 #panel,
 #mapview,
 #techview {
+  position: relative;
   min-height: 0;
   overflow: hidden;
   display: flex;
@@ -152,7 +153,17 @@ body {
 .map-scroll {
   flex: 1;
   min-height: 0;
+}
+
+.card-list {
   overflow: auto;
+}
+
+.tech-scroll,
+.map-scroll {
+  overflow: hidden;
+  touch-action: none;
+  position: relative;
 }
 
 .card-list {
@@ -296,12 +307,6 @@ body {
   padding: 8px;
 }
 
-.techboard {
-  width: 100%;
-  height: auto;
-  display: block;
-}
-
 .tlabel {
   fill: var(--line);
   font-family: var(--mono);
@@ -390,10 +395,65 @@ body {
   padding: 8px;
 }
 
-.mapboard {
+.zoomc {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  display: flex;
+  align-items: stretch;
+  gap: 1px;
+  border: 1px solid var(--faint);
+  background: var(--bg);
+  box-shadow: 0 0 0 2px var(--hint);
+}
+
+.zoomc-btn {
+  padding: 5px 9px;
+  font-size: 12px;
+  line-height: 1;
+  border: none;
+  background: transparent;
+  color: var(--line);
+}
+
+.zoomc-btn:hover:not(:disabled) {
+  background: var(--hint);
+  box-shadow: none;
+}
+
+.zoomc-val {
+  align-self: center;
+  min-width: 40px;
+  padding: 0 4px;
+  text-align: center;
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  color: var(--ink-dim);
+  border-left: 1px solid var(--fainter);
+  border-right: 1px solid var(--fainter);
+  font-variant-numeric: tabular-nums;
+}
+
+.mapboard,
+.techboard {
   width: 100%;
   height: auto;
   display: block;
+  overscroll-behavior: contain;
+  cursor: grab;
+}
+
+.mapboard.panning,
+.techboard.panning {
+  cursor: grabbing;
+}
+
+.mapboard {
+  background: var(--bg);
+}
+
+.techboard {
   background: var(--bg);
 }
 

@@ -1,6 +1,9 @@
 import type { Store } from '../store';
 import { el } from './dom';
 import { GLYPHS, type GlyphName } from './icons';
+import { setupPanZoom } from './panzoom';
+
+const SVG_NS = 'http://www.w3.org/2000/svg';
 
 interface Plot {
   x: number;
@@ -40,6 +43,12 @@ export function mountMap(store: Store): HTMLElement {
   const header = el('div', { class: 'pane-title' }, 'SITE PLAN — SITE ALPHA');
   const wrap = el('div', { class: 'map-scroll' });
   root.append(header, wrap);
+  const svg = document.createElementNS(SVG_NS, 'svg');
+  svg.setAttribute('class', 'mapboard');
+  svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', 'Site map');
+  wrap.append(svg);
+  const pan = setupPanZoom({ svg, host: wrap, baseW: VIEW_W, baseH: VIEW_H });
   let lastGen = -1;
 
   store.subscribe(() => {
@@ -106,17 +115,16 @@ export function mountMap(store: Store): HTMLElement {
     const siteTitle = `
       <text class="maptitle" x="30" y="16" data-tip="Site 01 — top-down plan view of the operation.">SITE 01 — PLAN VIEW</text>`;
 
-    wrap.innerHTML = `
-      <svg class="mapboard" viewBox="0 0 ${VIEW_W} ${VIEW_H}" role="img" aria-label="Site map">
-        ${defs}
-        ${frame}
-        ${cross}
-        ${siteTitle}
-        ${plots.join('')}
-        ${flows}
-        ${compass}
-        ${cajetin}
-      </svg>`;
+    svg.innerHTML = `
+      ${defs}
+      ${frame}
+      ${cross}
+      ${siteTitle}
+      ${plots.join('')}
+      ${flows}
+      ${compass}
+      ${cajetin}`;
+    pan.apply();
   }
 
   function renderPlot(
