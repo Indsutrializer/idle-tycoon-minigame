@@ -136,6 +136,24 @@ describe('ui smoke', () => {
     expect(hud.querySelectorAll('.res').length).toBe(3);
   });
 
+  it('adapts upgrade-button hover to the current level', () => {
+    const store = createStore();
+    const panel = mountPanel(store);
+    document.body.append(panel);
+
+    const buyTip = () => panel.querySelector('[data-action="buy"]')?.getAttribute('data-tip') ?? '';
+
+    expect(buyTip()).toContain('level 1 → 2');
+    expect(buyTip()).toContain('OUTPUT');
+
+    const err = store.buy('collector', 1);
+    expect(err).toBeNull();
+    store.tick(Date.now() + 1000);
+
+    expect(store.state.buildings['collector']).toBe(2);
+    expect(buyTip()).toContain('level 2 → 3');
+  });
+
   it('renders the Transaction Desk and trades resources without undefined codes', () => {
     const store = createStore();
     const panel = mountPanel(store);
