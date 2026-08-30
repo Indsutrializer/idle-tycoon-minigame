@@ -194,10 +194,10 @@ export const TECHS: TechDef[] = [
 ];
 
 export const EXCHANGE: ExchangeRate[] = [
-  { id: 'sell_energy', from: 'energy', to: 'money', rate: 1 },
-  { id: 'buy_energy', from: 'money', to: 'energy', rate: 1 / 3 },
-  { id: 'sell_research', from: 'research', to: 'money', rate: 2 },
-  { id: 'buy_research', from: 'money', to: 'research', rate: 1 / 8 },
+  { id: 'sell_energy', from: 'energy', to: 'money', factor: 0.25 },
+  { id: 'buy_energy', from: 'money', to: 'energy', factor: 1.6 },
+  { id: 'sell_research', from: 'research', to: 'money', factor: 0.25 },
+  { id: 'buy_research', from: 'money', to: 'research', factor: 1.6 },
 ];
 
 export const GAME_CONFIG: GameConfig = {

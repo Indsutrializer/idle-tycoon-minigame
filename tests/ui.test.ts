@@ -149,13 +149,13 @@ describe('ui smoke', () => {
     store.state.resources.energy = 100;
     const err = store.exchange('energy', 'money', 40);
     expect(err).toBeNull();
-    expect(store.state.resources.money).toBe(100);
+    expect(store.state.resources.money).toBe(90);
     expect(store.state.resources.energy).toBe(60);
 
-    const err2 = store.exchange('money', 'energy', 3);
+    const err2 = store.exchange('money', 'energy', 6);
     expect(err2).toBeNull();
     expect(store.state.resources.energy).toBe(61);
-    expect(store.state.resources.money).toBe(97);
+    expect(store.state.resources.money).toBe(84);
 
     const err3 = store.exchange('energy', 'research', 5);
     expect(err3).toBeTruthy();

@@ -48,7 +48,7 @@ export interface ExchangeRate {
   id: string;
   from: ResourceId;
   to: ResourceId;
-  rate: number;
+  factor: number;
 }
 
 export interface GameConfig {

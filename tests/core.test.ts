@@ -198,6 +198,28 @@ describe('offline progress', () => {
 });
 
 describe('exchange', () => {
+  const REF_ENR = 1.8 / 0.6;
+  const REF_RES = REF_ENR * (1 / 0.5);
+
+  it('derives rates from the live production conversion, never 1:1', () => {
+    const s = newPlayer();
+    // energy ref = refinery per-level CRD per ENR (1.8 × mult / 0.6), sell at 25%
+    expect(exchangeRateFor(s, GAME_CONFIG, 'energy', 'money')).toBeCloseTo(REF_ENR * 0.25, 6);
+    // buy: 1 CRD buys back 1 / (ref × 1.6) energy
+    expect(exchangeRateFor(s, GAME_CONFIG, 'money', 'energy')).toBeCloseTo(1 / (REF_ENR * 1.6), 6);
+    // research ref = energy ref × (1 ENR / 0.5 RES)
+    expect(exchangeRateFor(s, GAME_CONFIG, 'research', 'money')).toBeCloseTo(REF_RES * 0.25, 6);
+    expect(exchangeRateFor(s, GAME_CONFIG, 'money', 'research')).toBeCloseTo(1 / (REF_RES * 1.6), 6);
+    expect(exchangeRateFor(s, GAME_CONFIG, 'energy', 'research')).toBeNull();
+  });
+
+  it('re-evaluates the scale as refinery tech improves energy value', () => {
+    const s = newPlayer();
+    s.techs.automation = true;
+    expect(exchangeRateFor(s, GAME_CONFIG, 'energy', 'money')).toBeCloseTo((REF_ENR * 2) * 0.25, 6);
+    expect(exchangeRateFor(s, GAME_CONFIG, 'money', 'energy')).toBeCloseTo(1 / ((REF_ENR * 2) * 1.6), 6);
+  });
+
   it('sells energy to escape the early credit softlock', () => {
     const s = newPlayer();
     s.resources.money = 0;
@@ -205,30 +227,32 @@ describe('exchange', () => {
     const r = exchange(s, GAME_CONFIG, 'energy', 'money', 30);
     expect(r.ok).toBe(true);
     if (!r.ok) return;
-    expect(r.state.resources.money).toBe(30);
+    expect(r.state.resources.money).toBe(Math.floor(30 * REF_ENR * 0.25));
     expect(r.state.resources.energy).toBe(20);
-    expect(r.state.stats.earned['money']).toBe(30);
+    expect(r.state.stats.earned['money']).toBe(Math.floor(30 * REF_ENR * 0.25));
   });
 
   it('buys energy and research with credits', () => {
     const s = rich();
     const e = exchange(s, GAME_CONFIG, 'money', 'energy', 30);
     if (!e.ok) throw new Error(e.error);
-    expect(e.state.resources.energy).toBe(1e9 + 10);
-    const r = exchange(e.state, GAME_CONFIG, 'money', 'research', 8);
+    expect(e.state.resources.energy ?? 0).toBe(1e9 + Math.floor(30 * (1 / (REF_ENR * 1.6))));
+    const r = exchange(e.state, GAME_CONFIG, 'money', 'research', 30);
     if (!r.ok) throw new Error(r.error);
-    expect(r.state.resources.research).toBe(1e9 + 1);
+    expect(r.state.resources.research ?? 0).toBe(1e9 + Math.floor(30 * (1 / (REF_RES * 1.6))));
   });
 
   it('round-tripping is lossy so it cannot be farmed', () => {
     const s = rich();
+    s.resources.energy = 0;
     const before = s.resources.money ?? 0;
     const buy = exchange(s, GAME_CONFIG, 'money', 'energy', 30);
     if (!buy.ok) throw new Error(buy.error);
-    const sell = exchange(buy.state, GAME_CONFIG, 'energy', 'money', 10);
+    const held = buy.state.resources.energy ?? 0;
+    const sell = exchange(buy.state, GAME_CONFIG, 'energy', 'money', held);
     if (!sell.ok) throw new Error(sell.error);
     expect(sell.state.resources.money ?? 0).toBeLessThan(before);
-    expect(sell.state.resources.energy ?? 0).toBe(s.resources.energy ?? 0);
+    expect(sell.state.resources.energy ?? 0).toBe(0);
   });
 
   it('enforces listed routes, stock and minimum trade size', () => {
@@ -241,15 +265,8 @@ describe('exchange', () => {
   it('reports max affordable whole trades', () => {
     const s = rich();
     expect(maxExchange(s, GAME_CONFIG, 'energy', 'money')).toBe(Math.floor(s.resources.energy ?? 0));
-    expect(maxExchange(s, GAME_CONFIG, 'money', 'energy')).toBe(Math.floor((s.resources.money ?? 0) / 3) * 3);
-  });
-
-  it('exposes known market routes', () => {
-    expect(exchangeRateFor(GAME_CONFIG, 'energy', 'money')).toBe(1);
-    expect(exchangeRateFor(GAME_CONFIG, 'money', 'energy')).toBeCloseTo(1 / 3, 6);
-    expect(exchangeRateFor(GAME_CONFIG, 'research', 'money')).toBe(2);
-    expect(exchangeRateFor(GAME_CONFIG, 'money', 'research')).toBeCloseTo(1 / 8, 6);
-    expect(exchangeRateFor(GAME_CONFIG, 'energy', 'research')).toBeNull();
+    const unit = Math.ceil(1 / (1 / (REF_ENR * 1.6)));
+    expect(maxExchange(s, GAME_CONFIG, 'money', 'energy')).toBe(Math.floor((s.resources.money ?? 0) / unit) * unit);
   });
 });
 

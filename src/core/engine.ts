@@ -147,27 +147,53 @@ export function unlockTech(state: PlayerState, config: GameConfig, techId: strin
   return { ok: true, state: next };
 }
 
-export function exchangeRateFor(config: GameConfig, from: ResourceId, to: ResourceId): number | null {
-  const e = config.exchange.find((x) => x.from === from && x.to === to);
-  return e ? e.rate : null;
+export function marketReference(state: PlayerState, config: GameConfig, res: ResourceId): number {
+  const refinery = config.buildings.find((b) => b.id === 'refinery');
+  const lab = config.buildings.find((b) => b.id === 'lab');
+  if (res === 'energy') {
+    if (!refinery?.input) return 0;
+    const mult = techBuildingMultiplier(state, config, refinery.id);
+    return (refinery.perLevelRate * mult) / refinery.input.perLevel;
+  }
+  if (res === 'research') {
+    if (!lab?.input) return 0;
+    const enr = marketReference(state, config, 'energy');
+    const mult = techBuildingMultiplier(state, config, lab.id);
+    return enr * (lab.input.perLevel / (lab.perLevelRate * mult));
+  }
+  return 0;
 }
 
-export function exchangeUnit(config: GameConfig, from: ResourceId, to: ResourceId): number {
-  const rate = exchangeRateFor(config, from, to);
-  if (rate == null) return 0;
+export function exchangeRateFor(state: PlayerState, config: GameConfig, from: ResourceId, to: ResourceId): number | null {
+  const e = config.exchange.find((x) => x.from === from && x.to === to);
+  if (!e) return null;
+  if (to === 'money') {
+    const ref = marketReference(state, config, from);
+    return ref * e.factor;
+  }
+  if (from === 'money') {
+    const ref = marketReference(state, config, to);
+    return ref > 0 ? 1 / (ref * e.factor) : null;
+  }
+  return null;
+}
+
+export function exchangeUnit(state: PlayerState, config: GameConfig, from: ResourceId, to: ResourceId): number {
+  const rate = exchangeRateFor(state, config, from, to);
+  if (rate == null || rate <= 0) return 0;
   return Math.max(1, Math.ceil(1 / rate));
 }
 
 export function maxExchange(state: PlayerState, config: GameConfig, from: ResourceId, to: ResourceId): number {
-  const unit = exchangeUnit(config, from, to);
+  const unit = exchangeUnit(state, config, from, to);
   if (unit <= 0) return 0;
   return Math.floor(Math.floor(state.resources[from] ?? 0) / unit) * unit;
 }
 
 export function checkExchange(state: PlayerState, config: GameConfig, from: ResourceId, to: ResourceId, amount: number): string | null {
   if (amount < 1) return 'BAD_AMOUNT';
-  const rate = exchangeRateFor(config, from, to);
-  if (rate == null) return 'NO_RATE';
+  const rate = exchangeRateFor(state, config, from, to);
+  if (rate == null || rate <= 0) return 'NO_RATE';
   if (Math.floor(amount * rate) < 1) return 'TOO_SMALL';
   if (Math.floor(state.resources[from] ?? 0) < amount) return 'INSUFFICIENT_STOCK';
   return null;
@@ -176,7 +202,7 @@ export function checkExchange(state: PlayerState, config: GameConfig, from: Reso
 export function exchange(state: PlayerState, config: GameConfig, from: ResourceId, to: ResourceId, amount: number): { ok: true; state: PlayerState } | { ok: false; error: string } {
   const err = checkExchange(state, config, from, to, amount);
   if (err) return { ok: false, error: err };
-  const rate = exchangeRateFor(config, from, to)!;
+  const rate = exchangeRateFor(state, config, from, to)!;
   const received = Math.floor(amount * rate);
   const next = cloneState(state);
   next.resources[from] = Math.floor(next.resources[from] ?? 0) - amount;
@@ -245,9 +271,10 @@ export function validateDag(config: GameConfig): string[] {
   }
   for (const x of config.exchange) {
     if (x.from === x.to) errors.push(`exchange ${x.id}: self-trade not allowed`);
+    if (x.from !== 'money' && x.to !== 'money') errors.push(`exchange ${x.id}: routes must be money-anchored`);
     if (!resourceIds.has(x.from)) errors.push(`exchange ${x.id}: unknown source resource "${x.from}"`);
     if (!resourceIds.has(x.to)) errors.push(`exchange ${x.id}: unknown target resource "${x.to}"`);
-    if (!(x.rate > 0)) errors.push(`exchange ${x.id}: rate must be positive`);
+    if (!(x.factor > 0)) errors.push(`exchange ${x.id}: factor must be positive`);
   }
   const visiting = new Set<string>();
   const visited = new Set<string>();

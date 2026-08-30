@@ -1,4 +1,5 @@
-import { exchangeRateFor } from '../core/engine';
+import { exchangeRateFor, marketReference } from '../core/engine';
+import { fmtRate } from '../format';
 import type { Store } from '../store';
 import { el, fmtErr } from './dom';
 import { showToast } from './toast';
@@ -24,7 +25,7 @@ export function mountExchange(store: Store): HTMLElement {
   const root = el('section', { class: 'exchangepane' });
   const header = el('div', { class: 'pane-title' }, 'TRANSACTION DESK');
   header.dataset.tip =
-    'TRANSACTION DESK — exchange resources at published market rates. All trades go through Credits, and the buy/sell spread means round-trips never pay.';
+    'TRANSACTION DESK — exchange resources at live market rates, re-priced from your production conversion. The buy/sell spread means round-trips never pay.';
   const list = el('div', { class: 'card-list' });
   root.append(header, list);
   store.subscribe(render);
@@ -34,18 +35,20 @@ export function mountExchange(store: Store): HTMLElement {
     const cards: string[] = [];
     for (const r of store.config.resources) {
       if (r.id === 'money') continue;
-      const sell = exchangeRateFor(store.config, r.id, 'money');
-      const buy = exchangeRateFor(store.config, 'money', r.id);
+      const sell = exchangeRateFor(store.state, store.config, r.id, 'money');
+      const buy = exchangeRateFor(store.state, store.config, 'money', r.id);
       if (sell == null && buy == null) continue;
       const sellMax = store.maxExchange(r.id, 'money');
       const buyMax = store.maxExchange('money', r.id);
       const sellTxt = sell == null ? 'no sell route' : rateLabel(r.id, 'money', sell);
       const buyTxt = buy == null ? 'no buy route' : rateLabel('money', r.id, buy);
-      const sellTip = `Sell ${OUT_FULL[r.id]} for Credits. A lossy but always-available way to bootstrap Credits out of what you already produce.`;
-      const buyTip = `Buy ${OUT_FULL[r.id]} with Credits. Buy/sell rates keep a spread, so round-trips never pay.`;
+      const ref = marketReference(store.state, store.config, r.id);
+      const refTxt = ref > 0 ? ` market ref ${fmtRate(ref)} CRD` : '';
+      const sellTip = `Sell ${OUT_FULL[r.id]} for Credits below your own production rate${refTxt}. A lossy but always-available way to bootstrap Credits out of what you already produce.`;
+      const buyTip = `Buy ${OUT_FULL[r.id]} with Credits at a premium${refTxt}. Buy/sell rates keep a spread, so round-trips never pay.`;
       cards.push(`
         <article class="card card--exch">
-          <div class="card-row" data-tip="Transaction Desk routes for ${OUT_FULL[r.id]}. All trades go through Credits.">
+          <div class="card-row" data-tip="Transaction Desk routes for ${OUT_FULL[r.id]}. All trades go through Credits; rates re-price in real time from the live production conversion.">
             <span class="card-cod">${CODE[r.id]}</span>
             <span class="kv">${sellTxt} · ${buyTxt}</span>
           </div>
