@@ -141,7 +141,7 @@ export function unlockTech(state: PlayerState, config: GameConfig, techId: strin
   for (const e of t.effects) {
     if (e.t === 'unlock_building') {
       next.unlocked[e.building] = true;
-      next.buildings[e.building] = next.buildings[e.building] ?? 0;
+      next.buildings[e.building] = Math.max(1, next.buildings[e.building] ?? 0);
     }
   }
   return { ok: true, state: next };

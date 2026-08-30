@@ -37,7 +37,7 @@ export const BUILDINGS: BuildingDef[] = [
     description: 'Refines energy into export credits.',
     costBase: 30,
     costGrowth: 1.18,
-    baseRate: 2,
+    baseRate: 1.2,
     perLevelRate: 1.8,
     output: 'money',
     input: { resource: 'energy', perLevel: 0.6 },

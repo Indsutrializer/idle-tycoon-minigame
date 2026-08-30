@@ -95,11 +95,12 @@ describe('technologies', () => {
     expect(solveRates(r.state, GAME_CONFIG).perBuilding['collector']!.mult).toBe(2);
   });
 
-  it('unlocks buildings and records level 0', () => {
+  it('unlocks buildings as working units that immediately produce', () => {
     const r = unlockTech(rich(), GAME_CONFIG, 'metallurgy');
     if (!r.ok) throw new Error(r.error);
     expect(r.state.unlocked['refinery']).toBe(true);
-    expect(r.state.buildings['refinery']).toBe(0);
+    expect(r.state.buildings['refinery']).toBe(1);
+    expect(solveRates(r.state, GAME_CONFIG).perBuilding['refinery']!.output).toBeCloseTo(1.2, 6);
   });
 });
 
@@ -116,7 +117,7 @@ describe('rates', () => {
     s.unlocked.refinery = true;
     const rates = solveRates(s, GAME_CONFIG);
     expect(rates.perBuilding['refinery']!.scale).toBeCloseTo(1, 6);
-    expect(rates.net.money).toBeCloseTo(2, 6);
+    expect(rates.net.money).toBeCloseTo(1.2, 6);
     expect(rates.net.energy).toBeCloseTo(0.4, 6);
   });
 
@@ -152,7 +153,7 @@ describe('offline progress', () => {
     s.unlocked.lab = true;
     const res = applyOffline(s, GAME_CONFIG, 3_600_000);
     expect(res.state.resources.energy).toBeCloseTo(0, 3);
-    expect(res.gains.money).toBeCloseTo(3.8 * 3600, 0);
+    expect(res.gains.money).toBeCloseTo(3.0 * 3600, 0);
     expect(res.gains.research).toBeCloseTo(3600, 0);
   });
 
@@ -194,6 +195,67 @@ describe('offline progress', () => {
     let cur = cloneState(s);
     for (let i = 0; i < 3600; i++) cur = simulate(cur, GAME_CONFIG, 1000);
     expect(Math.abs((cur.resources.money ?? 0) - exact)).toBeLessThan(1.5);
+  });
+});
+
+describe('building generation and upgrade precision', () => {
+  it('every building generates at its exact per-level rate with no drift', () => {
+    for (const def of GAME_CONFIG.buildings) {
+      for (const level of [1, 5]) {
+        const s = newPlayer();
+        s.resources.money = 1e9;
+        s.resources.energy = 1e9;
+        s.resources.research = 1e9;
+        s.unlocked[def.id] = true;
+        s.buildings[def.id] = level;
+        if (def.id !== 'collector') s.buildings.collector = 20;
+
+        const rates = solveRates(s, GAME_CONFIG);
+        const expectedRate = def.baseRate + def.perLevelRate * (level - 1);
+        expect(rates.perBuilding[def.id]).toBeTruthy();
+        const pr = rates.perBuilding[def.id]!;
+        expect(pr.mult).toBeCloseTo(1, 8);
+        expect(pr.scale).toBeCloseTo(1, 6);
+        expect(pr.output).toBeCloseTo(expectedRate, 8);
+        expect(rates.gross[def.output]).toBeGreaterThan(0);
+
+        const startEnergy = 1e6;
+        const startResearch = 1e6;
+        const ticked = simulate(
+          { ...s, resources: { ...s.resources, energy: startEnergy, research: startResearch } },
+          GAME_CONFIG,
+          4000,
+        );
+        const gainEnergy = (ticked.resources.energy ?? 0) - startEnergy;
+        const gainResearch = (ticked.resources.research ?? 0) - startResearch;
+        const gainMoney = (ticked.resources.money ?? 0) - (s.resources.money ?? 0);
+        expect(Math.abs(gainEnergy - (rates.net.energy ?? 0) * 4)).toBeLessThan(0.02);
+        expect(Math.abs(gainMoney - (rates.net.money ?? 0) * 4)).toBeLessThan(0.02);
+        expect(Math.abs(gainResearch - (rates.net.research ?? 0) * 4)).toBeLessThan(0.02);
+      }
+    }
+  });
+
+  it('global output multiplier applies exactly to every unit', () => {
+    const s = rich();
+    s.unlocked.refinery = true;
+    s.buildings.refinery = 1;
+    const before = solveRates(s, GAME_CONFIG).net.money ?? 0;
+    s.techs.grid_boost = true;
+    const after = solveRates(s, GAME_CONFIG).net.money ?? 0;
+    expect(after).toBeCloseTo(before * 1.5, 8);
+  });
+
+  it('building tech multipliers compound exactly on output', () => {
+    const s = rich();
+    s.unlocked.refinery = true;
+    s.buildings.refinery = 1;
+    s.techs.metallurgy = true;
+    s.techs.automation = true;
+    s.techs.logistics = true;
+    const pr = solveRates(s, GAME_CONFIG).perBuilding['refinery']!;
+    expect(pr.mult).toBeCloseTo(4, 8);
+    expect(pr.output).toBeCloseTo(1.2 * 4, 8);
   });
 });
 
