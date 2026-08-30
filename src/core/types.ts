@@ -44,11 +44,19 @@ export interface OfflineConfig {
   efficiency: number;
 }
 
+export interface ExchangeRate {
+  id: string;
+  from: ResourceId;
+  to: ResourceId;
+  rate: number;
+}
+
 export interface GameConfig {
   version: number;
   resources: ResourceDef[];
   buildings: BuildingDef[];
   techs: TechDef[];
+  exchange: ExchangeRate[];
   offline: OfflineConfig;
 }
 

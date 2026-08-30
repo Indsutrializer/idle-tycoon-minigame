@@ -35,6 +35,14 @@ export function fmtErr(code: string): string {
       return 'Missing plan prerequisites.';
     case 'INSUFFICIENT_COST':
       return 'Insufficient resources for the plan.';
+    case 'NO_RATE':
+      return 'No market route between those resources.';
+    case 'TOO_SMALL':
+      return 'Too little to trade for this route.';
+    case 'INSUFFICIENT_STOCK':
+      return 'Insufficient resources to complete the trade.';
+    case 'BAD_AMOUNT':
+      return 'Trade amount must be at least 1.';
     default:
       return code;
   }

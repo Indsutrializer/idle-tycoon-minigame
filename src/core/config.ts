@@ -1,5 +1,6 @@
 import type {
   BuildingDef,
+  ExchangeRate,
   GameConfig,
   PlayerState,
   ResourceId,
@@ -192,11 +193,19 @@ export const TECHS: TechDef[] = [
   },
 ];
 
+export const EXCHANGE: ExchangeRate[] = [
+  { id: 'sell_energy', from: 'energy', to: 'money', rate: 1 },
+  { id: 'buy_energy', from: 'money', to: 'energy', rate: 1 / 3 },
+  { id: 'sell_research', from: 'research', to: 'money', rate: 2 },
+  { id: 'buy_research', from: 'money', to: 'research', rate: 1 / 8 },
+];
+
 export const GAME_CONFIG: GameConfig = {
   version: 1,
   resources: RESOURCES,
   buildings: BUILDINGS,
   techs: TECHS,
+  exchange: EXCHANGE,
   offline: { maxHours: 48, efficiency: 1 },
 };
 

@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { BUILDINGS, GAME_CONFIG, newPlayer } from '../src/core/config';
-import { buy, canUnlock, cloneState, maxAffordable, solveRates, techBuildingMultiplier, unlockTech, validateDag } from '../src/core/engine';
+import {
+  buy,
+  canUnlock,
+  cloneState,
+  exchange,
+  exchangeRateFor,
+  maxAffordable,
+  maxExchange,
+  solveRates,
+  techBuildingMultiplier,
+  unlockTech,
+  validateDag,
+} from '../src/core/engine';
 import { applyOffline, simulate } from '../src/core/offline';
 import type { PlayerState } from '../src/core/types';
 
@@ -182,6 +194,62 @@ describe('offline progress', () => {
     let cur = cloneState(s);
     for (let i = 0; i < 3600; i++) cur = simulate(cur, GAME_CONFIG, 1000);
     expect(Math.abs((cur.resources.money ?? 0) - exact)).toBeLessThan(1.5);
+  });
+});
+
+describe('exchange', () => {
+  it('sells energy to escape the early credit softlock', () => {
+    const s = newPlayer();
+    s.resources.money = 0;
+    s.resources.energy = 50;
+    const r = exchange(s, GAME_CONFIG, 'energy', 'money', 30);
+    expect(r.ok).toBe(true);
+    if (!r.ok) return;
+    expect(r.state.resources.money).toBe(30);
+    expect(r.state.resources.energy).toBe(20);
+    expect(r.state.stats.earned['money']).toBe(30);
+  });
+
+  it('buys energy and research with credits', () => {
+    const s = rich();
+    const e = exchange(s, GAME_CONFIG, 'money', 'energy', 30);
+    if (!e.ok) throw new Error(e.error);
+    expect(e.state.resources.energy).toBe(1e9 + 10);
+    const r = exchange(e.state, GAME_CONFIG, 'money', 'research', 8);
+    if (!r.ok) throw new Error(r.error);
+    expect(r.state.resources.research).toBe(1e9 + 1);
+  });
+
+  it('round-tripping is lossy so it cannot be farmed', () => {
+    const s = rich();
+    const before = s.resources.money ?? 0;
+    const buy = exchange(s, GAME_CONFIG, 'money', 'energy', 30);
+    if (!buy.ok) throw new Error(buy.error);
+    const sell = exchange(buy.state, GAME_CONFIG, 'energy', 'money', 10);
+    if (!sell.ok) throw new Error(sell.error);
+    expect(sell.state.resources.money ?? 0).toBeLessThan(before);
+    expect(sell.state.resources.energy ?? 0).toBe(s.resources.energy ?? 0);
+  });
+
+  it('enforces listed routes, stock and minimum trade size', () => {
+    const s = newPlayer();
+    expect(exchange(s, GAME_CONFIG, 'energy', 'research', 5).ok).toBe(false);
+    expect(exchange(s, GAME_CONFIG, 'energy', 'money', 500).ok).toBe(false);
+    expect(exchange(s, GAME_CONFIG, 'money', 'energy', 1).ok).toBe(false);
+  });
+
+  it('reports max affordable whole trades', () => {
+    const s = rich();
+    expect(maxExchange(s, GAME_CONFIG, 'energy', 'money')).toBe(Math.floor(s.resources.energy ?? 0));
+    expect(maxExchange(s, GAME_CONFIG, 'money', 'energy')).toBe(Math.floor((s.resources.money ?? 0) / 3) * 3);
+  });
+
+  it('exposes known market routes', () => {
+    expect(exchangeRateFor(GAME_CONFIG, 'energy', 'money')).toBe(1);
+    expect(exchangeRateFor(GAME_CONFIG, 'money', 'energy')).toBeCloseTo(1 / 3, 6);
+    expect(exchangeRateFor(GAME_CONFIG, 'research', 'money')).toBe(2);
+    expect(exchangeRateFor(GAME_CONFIG, 'money', 'research')).toBeCloseTo(1 / 8, 6);
+    expect(exchangeRateFor(GAME_CONFIG, 'energy', 'research')).toBeNull();
   });
 });
 

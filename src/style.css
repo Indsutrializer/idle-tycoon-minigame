@@ -155,6 +155,23 @@ body {
   min-height: 0;
 }
 
+.techpane,
+.exchangepane {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.exchangepane {
+  border-top: 1px solid var(--faint);
+}
+
+.exchangepane .card-list {
+  overflow: auto;
+}
+
 .card-list {
   overflow: auto;
 }
@@ -252,6 +269,19 @@ body {
 .card--locked {
   opacity: 0.55;
   border-style: dashed;
+}
+
+.card--exch {
+  border-style: dashed;
+  border-color: var(--faint);
+}
+
+.card--exch .card-actions {
+  gap: 6px;
+}
+
+.card--exch .btn {
+  flex: 1;
 }
 
 .card-lock {

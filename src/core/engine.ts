@@ -147,6 +147,44 @@ export function unlockTech(state: PlayerState, config: GameConfig, techId: strin
   return { ok: true, state: next };
 }
 
+export function exchangeRateFor(config: GameConfig, from: ResourceId, to: ResourceId): number | null {
+  const e = config.exchange.find((x) => x.from === from && x.to === to);
+  return e ? e.rate : null;
+}
+
+export function exchangeUnit(config: GameConfig, from: ResourceId, to: ResourceId): number {
+  const rate = exchangeRateFor(config, from, to);
+  if (rate == null) return 0;
+  return Math.max(1, Math.ceil(1 / rate));
+}
+
+export function maxExchange(state: PlayerState, config: GameConfig, from: ResourceId, to: ResourceId): number {
+  const unit = exchangeUnit(config, from, to);
+  if (unit <= 0) return 0;
+  return Math.floor(Math.floor(state.resources[from] ?? 0) / unit) * unit;
+}
+
+export function checkExchange(state: PlayerState, config: GameConfig, from: ResourceId, to: ResourceId, amount: number): string | null {
+  if (amount < 1) return 'BAD_AMOUNT';
+  const rate = exchangeRateFor(config, from, to);
+  if (rate == null) return 'NO_RATE';
+  if (Math.floor(amount * rate) < 1) return 'TOO_SMALL';
+  if (Math.floor(state.resources[from] ?? 0) < amount) return 'INSUFFICIENT_STOCK';
+  return null;
+}
+
+export function exchange(state: PlayerState, config: GameConfig, from: ResourceId, to: ResourceId, amount: number): { ok: true; state: PlayerState } | { ok: false; error: string } {
+  const err = checkExchange(state, config, from, to, amount);
+  if (err) return { ok: false, error: err };
+  const rate = exchangeRateFor(config, from, to)!;
+  const received = Math.floor(amount * rate);
+  const next = cloneState(state);
+  next.resources[from] = Math.floor(next.resources[from] ?? 0) - amount;
+  next.resources[to] = (next.resources[to] ?? 0) + received;
+  next.stats.earned[to] = (next.stats.earned[to] ?? 0) + received;
+  return { ok: true, state: next };
+}
+
 export function solveRates(state: PlayerState, config: GameConfig): Rates {
   const net = zeroMap(config);
   const gross = zeroMap(config);
@@ -204,6 +242,12 @@ export function validateDag(config: GameConfig): string[] {
         errors.push(`tech ${t.id}: unlocks unknown building "${e.building}"`);
       }
     }
+  }
+  for (const x of config.exchange) {
+    if (x.from === x.to) errors.push(`exchange ${x.id}: self-trade not allowed`);
+    if (!resourceIds.has(x.from)) errors.push(`exchange ${x.id}: unknown source resource "${x.from}"`);
+    if (!resourceIds.has(x.to)) errors.push(`exchange ${x.id}: unknown target resource "${x.to}"`);
+    if (!(x.rate > 0)) errors.push(`exchange ${x.id}: rate must be positive`);
   }
   const visiting = new Set<string>();
   const visited = new Set<string>();

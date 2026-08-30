@@ -1,7 +1,14 @@
 import { GAME_CONFIG } from './core/config';
-import { buy as engineBuy, maxAffordable, solveRates, unlockTech } from './core/engine';
+import {
+  buy as engineBuy,
+  exchange as engineExchange,
+  maxExchange as engineMaxExchange,
+  maxAffordable,
+  solveRates,
+  unlockTech,
+} from './core/engine';
 import { applyOffline, simulate } from './core/offline';
-import type { OfflineGains, PlayerState, Rates } from './core/types';
+import type { OfflineGains, PlayerState, Rates, ResourceId } from './core/types';
 import { clearGame, loadGame, migrate, saveGame } from './storage';
 
 export type GameListener = () => void;
@@ -15,6 +22,8 @@ export interface Store {
   tick(now: number): void;
   buy(buildingId: string, qty: number): string | null;
   unlock(techId: string): string | null;
+  exchange(from: string, to: string, amount: number): string | null;
+  maxExchange(from: string, to: string): number;
   maxBuyQty(buildingId: string): number;
   canUnlock(techId: string): boolean;
   persist(): void;
@@ -104,6 +113,17 @@ export function createStore(): Store {
       const def = config.buildings.find((b) => b.id === buildingId);
       if (!def || !state.unlocked[buildingId]) return 0;
       return maxAffordable(def, state.buildings[buildingId] ?? 0, Math.floor(state.resources.money ?? 0));
+    },
+    exchange(from, to, amount) {
+      const res = engineExchange(state, config, from as ResourceId, to as ResourceId, amount);
+      if (!res.ok) return res.error;
+      state = res.state;
+      gen++;
+      notify();
+      return null;
+    },
+    maxExchange(from, to) {
+      return engineMaxExchange(state, config, from as ResourceId, to as ResourceId);
     },
     canUnlock(techId) {
       const t = config.techs.find((x) => x.id === techId);

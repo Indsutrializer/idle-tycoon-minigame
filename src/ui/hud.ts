@@ -8,11 +8,11 @@ const CODE: Record<string, string> = { money: 'CRD', energy: 'ENR', research: 'R
 
 const TIP: Record<string, string> = {
   money:
-    'CRD — Credit. The site currency: earned by refining energy and spent on construction and the Technology Plan.',
+    'CRD — Credit. The site currency: earned by refining energy, spent on construction and the Technology Plan, and tradable at the Transaction Desk.',
   energy:
-    'ENR — Energy. Produced by collectors and turbines; consumed by refineries and laboratories to keep them running.',
+    'ENR — Energy. Produced by collectors and turbines; consumed by refineries and laboratories to keep them running, and tradable at the Transaction Desk.',
   research:
-    'RES — Research. Produced by laboratories; spent to unlock technologies in the Technology Plan.',
+    'RES — Research. Produced by laboratories; spent to unlock technologies in the Technology Plan, and tradable at the Transaction Desk.',
 };
 
 const BRAND_TIP =

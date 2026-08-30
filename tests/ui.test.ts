@@ -8,6 +8,7 @@ import { mountMap } from '../src/ui/map';
 import { mountPanel } from '../src/ui/panel';
 import { setupPanZoom } from '../src/ui/panzoom';
 import { mountTechTree } from '../src/ui/techTree';
+import { mountExchange } from '../src/ui/exchange';
 
 class MemStorage implements Storage {
   private m = new Map<string, string>();
@@ -108,10 +109,12 @@ describe('ui smoke', () => {
     const panel = mountPanel(store);
     const map = mountMap(store);
     const tech = mountTechTree(store);
-    document.body.append(hud, panel, map, tech);
+    const exch = mountExchange(store);
+    document.body.append(hud, panel, map, tech, exch);
 
     expect(panel.innerHTML).toContain('Solar Collector');
     expect(panel.innerHTML).toContain('data-action="buy"');
+    expect(exch.innerHTML).toContain('data-action="exch"');
     expect(hud.querySelector('.res')?.getAttribute('data-tip')).toBeTruthy();
     expect(hud.querySelector('.hud-brand')?.getAttribute('data-tip')).toBeTruthy();
     expect(tech.innerHTML).toContain('data-tip');
@@ -131,6 +134,32 @@ describe('ui smoke', () => {
 
     store.tick(Date.now() + 1000);
     expect(hud.querySelectorAll('.res').length).toBe(3);
+  });
+
+  it('renders the Transaction Desk and trades resources without undefined codes', () => {
+    const store = createStore();
+    const panel = mountPanel(store);
+    const exch = mountExchange(store);
+    document.body.append(panel, exch);
+
+    expect(exch.innerHTML).toContain('TRANSACTION DESK');
+    expect(exch.innerHTML).toContain('data-action="exch"');
+    expect(exch.innerHTML).not.toContain('undefined');
+
+    store.state.resources.energy = 100;
+    const err = store.exchange('energy', 'money', 40);
+    expect(err).toBeNull();
+    expect(store.state.resources.money).toBe(100);
+    expect(store.state.resources.energy).toBe(60);
+
+    const err2 = store.exchange('money', 'energy', 3);
+    expect(err2).toBeNull();
+    expect(store.state.resources.energy).toBe(61);
+    expect(store.state.resources.money).toBe(97);
+
+    const err3 = store.exchange('energy', 'research', 5);
+    expect(err3).toBeTruthy();
+    expect(store.state.resources.energy).toBe(61);
   });
 
   it('picks up a save with pending offline progress', () => {
