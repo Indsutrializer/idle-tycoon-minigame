@@ -15,14 +15,15 @@ Run `pnpm run typecheck && pnpm test && pnpm build` before finishing a change.
 ## Architecture
 
 - `src/core/` — pure, deterministic game engine. **Never** touch DOM, timers, `Date`, or storage here. This layer must stay env-agnostic so it can be shared/reused later (e.g. server-side solve for sync).
-  - `config.ts` — resources, buildings, tech DAG, `GAME_CONFIG`, `newPlayer()`
+  - `config.ts` — resources, buildings, tech DAG, achievements, `GAME_CONFIG`, `newPlayer()`
   - `engine.ts` — rates, multipliers, costs, buy/unlock, `solveRates`, `validateDag`
+  - `achievements.ts` — achievement condition checking, multipliers, unlock detection
   - `offline.ts` — `simulate()` (live ticks) and `applyOffline()` (event-based offline solve)
   - `types.ts` — shared types
 - `src/store.ts` — reactive store (pub/sub) bridging core and UI; `gen` counter avoids redundant renders; `persist`/`reset`/`tick`.
 - `src/storage.ts` — `localStorage` persistence with versioned migrations (`globalThis.localStorage`, since happy-dom lacks `window.localStorage`).
-- `src/ui/` — DOM/SVG views (hud, panel, techTree, map, toast, dom helpers, icons). Blueprint monochrome aesthetic (`#74c8ff` on `#0a0e13`).
-- `tests/` — vitest; `core.test.ts` covers engine/offline determinism, `ui.test.ts` mounts views (uses a `MemStorage` polyfill).
+- `src/ui/` — DOM/SVG views (hud, panel, techTree, achievements, map, toast, dom helpers, icons). Blueprint monochrome aesthetic (`#74c8ff` on `#0a0e13`).
+- `tests/` — vitest; `core.test.ts` covers engine/offline determinism, `achievements.test.ts` covers achievement logic, `ui.test.ts` mounts views (uses a `MemStorage` polyfill).
 
 ## Conventions
 
