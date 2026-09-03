@@ -70,6 +70,11 @@ export function mountHud(store: Store): HTMLElement {
   };
 
   store.subscribe(update);
+  store.subscribeAchievement(() => {
+    achBadge.classList.remove('glow');
+    void achBadge.offsetWidth;
+    achBadge.classList.add('glow');
+  });
   update();
   return root;
 }

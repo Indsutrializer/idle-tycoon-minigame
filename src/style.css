@@ -121,6 +121,24 @@ body {
   border: 1px dashed var(--faint);
   padding: 3px 8px;
   white-space: nowrap;
+  transition: box-shadow 0.2s, border-color 0.2s, color 0.2s;
+}
+
+.badge-ach.glow {
+  animation: achGlow 1.8s ease-out;
+}
+
+@keyframes achGlow {
+  0% {
+    box-shadow: 0 0 8px 2px var(--warn), 0 0 16px 4px rgba(255, 210, 138, 0.3);
+    border-color: var(--warn);
+    color: #fff;
+  }
+  100% {
+    box-shadow: none;
+    border-color: var(--faint);
+    color: var(--warn);
+  }
 }
 
 /* ---------- Layout ---------- */
