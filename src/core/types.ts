@@ -12,6 +12,30 @@ export type Effect =
   | { t: 'add_global_output'; multiplier: number }
   | { t: 'offline_cap'; multiplier: number };
 
+export type AchievementEffect =
+  | { t: 'building_output'; building?: string; multiplier: number }
+  | { t: 'building_cost'; multiplier: number }
+  | { t: 'tech_cost'; multiplier: number }
+  | { t: 'trade_rate'; multiplier: number }
+  | { t: 'global_output'; multiplier: number };
+
+export type AchievementCondition =
+  | { type: 'resource_total'; resource: ResourceId; amount: number }
+  | { type: 'building_count'; building?: string; amount: number }
+  | { type: 'building_level'; building: string; amount: number }
+  | { type: 'tech_count'; amount: number }
+  | { type: 'all_techs' }
+  | { type: 'trades_done'; amount: number };
+
+export interface AchievementDef {
+  id: string;
+  name: string;
+  description: string;
+  condition: AchievementCondition;
+  reward: AchievementEffect;
+  visible: boolean;
+}
+
 export interface BuildingDef {
   id: string;
   name: string;
@@ -56,12 +80,14 @@ export interface GameConfig {
   resources: ResourceDef[];
   buildings: BuildingDef[];
   techs: TechDef[];
+  achievements: AchievementDef[];
   exchange: ExchangeRate[];
   offline: OfflineConfig;
 }
 
 export interface PlayerStats {
   earned: Record<string, number>;
+  totalTrades: number;
 }
 
 export interface PlayerState {
@@ -71,6 +97,8 @@ export interface PlayerState {
   unlocked: Record<string, boolean>;
   techs: Record<string, boolean>;
   stats: PlayerStats;
+  achievements: Record<string, boolean>;
+  achievementClaimed: Record<string, boolean>;
 }
 
 export interface SavedGame {

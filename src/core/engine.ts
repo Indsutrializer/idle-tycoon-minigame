@@ -1,3 +1,9 @@
+import {
+  achievementBuildingMultiplier,
+  achievementCostMultiplier,
+  achievementGlobalMultiplier,
+  achievementTradeMultiplier,
+} from './achievements';
 import type {
   BuildingDef,
   Effect,
@@ -15,6 +21,8 @@ export function cloneState(s: PlayerState): PlayerState {
     unlocked: { ...s.unlocked },
     techs: { ...s.techs },
     stats: { ...s.stats, earned: { ...s.stats.earned } },
+    achievements: { ...s.achievements },
+    achievementClaimed: { ...s.achievementClaimed },
   };
 }
 
@@ -61,21 +69,21 @@ export function buildingRate(def: BuildingDef, level: number): number {
   return def.baseRate + def.perLevelRate * (level - 1);
 }
 
-export function buildingCost(def: BuildingDef, level: number): number {
-  return def.costBase * Math.pow(def.costGrowth, level);
+export function buildingCost(def: BuildingDef, level: number, costMult = 1): number {
+  return def.costBase * Math.pow(def.costGrowth, level) * costMult;
 }
 
-export function bulkCost(def: BuildingDef, level: number, qty: number): number {
+export function bulkCost(def: BuildingDef, level: number, qty: number, costMult = 1): number {
   let total = 0;
-  for (let i = 0; i < qty; i++) total += buildingCost(def, level + i);
+  for (let i = 0; i < qty; i++) total += buildingCost(def, level + i, costMult);
   return total;
 }
 
-export function maxAffordable(def: BuildingDef, level: number, budget: number): number {
+export function maxAffordable(def: BuildingDef, level: number, budget: number, costMult = 1): number {
   let total = 0;
   let qty = 0;
   for (let i = 0; i < 512; i++) {
-    const c = buildingCost(def, level + qty);
+    const c = buildingCost(def, level + qty, costMult);
     if (total + c > budget + 1e-9) break;
     total += c;
     qty++;
@@ -92,7 +100,8 @@ export function canBuy(state: PlayerState, config: GameConfig, buildingId: strin
   if (!def) return false;
   if (!isUnlocked(state, buildingId)) return false;
   const level = state.buildings[buildingId] ?? 0;
-  const cost = bulkCost(def, level, qty);
+  const costMult = achievementCostMultiplier(state, 'building');
+  const cost = bulkCost(def, level, qty, costMult);
   return Math.floor(state.resources.money ?? 0) >= cost;
 }
 
@@ -101,13 +110,14 @@ export function buy(state: PlayerState, config: GameConfig, buildingId: string, 
   if (!def) return { ok: false, error: 'UNKNOWN_BUILDING' };
   if (!isUnlocked(state, buildingId)) return { ok: false, error: 'LOCKED' };
   const level = state.buildings[buildingId] ?? 0;
-  const cost = bulkCost(def, level, qty);
+  const costMult = achievementCostMultiplier(state, 'building');
+  const cost = bulkCost(def, level, qty, costMult);
   if (Math.floor(state.resources.money ?? 0) < cost) return { ok: false, error: 'INSUFFICIENT_FUNDS' };
   const next = cloneState(state);
   let cash = Math.floor(next.resources.money ?? 0);
   let lvl = level;
   for (let i = 0; i < qty; i++) {
-    cash = Math.max(0, Math.floor(cash) - buildingCost(def, lvl));
+    cash = Math.max(0, Math.floor(cash) - buildingCost(def, lvl, costMult));
     lvl++;
   }
   next.resources.money = cash;
@@ -126,8 +136,9 @@ export function checkUnlock(state: PlayerState, config: GameConfig, techId: stri
   for (const r of t.requires) {
     if (!state.techs[r]) return 'MISSING_PREREQUISITES';
   }
+  const costMult = achievementCostMultiplier(state, 'tech');
   const have = Math.floor(state.resources[t.cost.resource] ?? 0);
-  if (have < t.cost.amount) return 'INSUFFICIENT_COST';
+  if (have < Math.ceil(t.cost.amount * costMult)) return 'INSUFFICIENT_COST';
   return null;
 }
 
@@ -135,8 +146,9 @@ export function unlockTech(state: PlayerState, config: GameConfig, techId: strin
   const err = checkUnlock(state, config, techId);
   if (err) return { ok: false, error: err };
   const t = config.techs.find((x) => x.id === techId)!;
+  const costMult = achievementCostMultiplier(state, 'tech');
   const next = cloneState(state);
-  next.resources[t.cost.resource] = Math.floor(next.resources[t.cost.resource] ?? 0) - t.cost.amount;
+  next.resources[t.cost.resource] = Math.floor(next.resources[t.cost.resource] ?? 0) - Math.ceil(t.cost.amount * costMult);
   next.techs[t.id] = true;
   for (const e of t.effects) {
     if (e.t === 'unlock_building') {
@@ -167,13 +179,14 @@ export function marketReference(state: PlayerState, config: GameConfig, res: Res
 export function exchangeRateFor(state: PlayerState, config: GameConfig, from: ResourceId, to: ResourceId): number | null {
   const e = config.exchange.find((x) => x.from === from && x.to === to);
   if (!e) return null;
+  const tradeMult = achievementTradeMultiplier(state);
   if (to === 'money') {
     const ref = marketReference(state, config, from);
-    return ref * e.factor;
+    return ref * e.factor * tradeMult;
   }
   if (from === 'money') {
     const ref = marketReference(state, config, to);
-    return ref > 0 ? 1 / (ref * e.factor) : null;
+    return ref > 0 ? 1 / (ref * e.factor * tradeMult) : null;
   }
   return null;
 }
@@ -216,14 +229,15 @@ export function solveRates(state: PlayerState, config: GameConfig): Rates {
   const gross = zeroMap(config);
   const consumption = zeroMap(config);
   const perBuilding: Record<string, { mult: number; scale: number; output: number; inputUsed: number }> = {};
-  const global = globalMultiplier(state, config);
+  const global = globalMultiplier(state, config) * achievementGlobalMultiplier(state);
 
   const raw = new Map<string, { def: BuildingDef; level: number; rate: number; demand: number }>();
   for (const b of config.buildings) {
     const level = state.buildings[b.id] ?? 0;
     if (level <= 0) continue;
-    const mult = techBuildingMultiplier(state, config, b.id);
-    const rate = buildingRate(b, level) * mult * global;
+    const techMult = techBuildingMultiplier(state, config, b.id);
+    const achMult = achievementBuildingMultiplier(state, b.id);
+    const rate = buildingRate(b, level) * techMult * achMult * global;
     const demand = b.input ? b.input.perLevel * level : 0;
     raw.set(b.id, { def: b, level, rate, demand });
     gross[b.output] += rate;
@@ -245,7 +259,9 @@ export function solveRates(state: PlayerState, config: GameConfig): Rates {
     const used = b.input ? e.demand * ratio[b.input.resource] : 0;
     net[b.output] += out;
     if (b.input) net[b.input.resource] -= used;
-    perBuilding[b.id] = { mult: techBuildingMultiplier(state, config, b.id), scale: sc, output: out, inputUsed: used };
+    const techMult = techBuildingMultiplier(state, config, b.id);
+    const achMult = achievementBuildingMultiplier(state, b.id);
+    perBuilding[b.id] = { mult: techMult * achMult, scale: sc, output: out, inputUsed: used };
   }
   return { net, gross, consumption, perBuilding };
 }

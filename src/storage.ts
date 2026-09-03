@@ -47,6 +47,10 @@ export function migrate(saved: SavedGame): PlayerState {
     const resources: Record<string, number> = {};
     for (const r of GAME_CONFIG.resources) resources[r.id] = migrated.resources[r.id] ?? 0;
     migrated.resources = resources;
+    if (!migrated.achievements) migrated.achievements = {};
+    if (!migrated.achievementClaimed) migrated.achievementClaimed = {};
+    if (!migrated.stats) migrated.stats = { earned: { ...resources }, totalTrades: 0 };
+    if (migrated.stats.totalTrades == null) migrated.stats.totalTrades = 0;
     return migrated;
   }
   return saved.state;

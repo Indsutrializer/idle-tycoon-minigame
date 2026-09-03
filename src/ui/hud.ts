@@ -21,6 +21,9 @@ const BRAND_TIP =
 const LOCAL_TIP =
   'STATUS: LOCAL — the game saves only to this device (browser localStorage). No account and no sync.';
 
+const ACH_TIP =
+  'ACHIEVEMENTS — progress milestones that grant permanent bonuses. Claimed achievements boost your production.';
+
 export function mountHud(store: Store): HTMLElement {
   const root = el('div', { class: 'hud' });
   const brand = el('div', { class: 'hud-brand' }, 'IDLE TYCOON — SITE ALPHA');
@@ -41,9 +44,12 @@ export function mountHud(store: Store): HTMLElement {
     bar.append(res);
   }
 
+  const achBadge = el('div', { class: 'badge-ach' });
+  achBadge.dataset.tip = ACH_TIP;
+
   const badge = el('div', { class: 'badge-local' }, 'STATUS: LOCAL');
   badge.dataset.tip = LOCAL_TIP;
-  root.append(brand, bar, badge);
+  root.append(brand, bar, achBadge, badge);
 
   const update = () => {
     const { state, rates } = store;
@@ -57,6 +63,10 @@ export function mountHud(store: Store): HTMLElement {
       ref.amt.classList.toggle('zero', amount <= 0 && net <= 0);
       ref.rate.classList.toggle('minus', net < 0);
     }
+
+    const total = GAME_CONFIG.achievements.length;
+    const claimed = GAME_CONFIG.achievements.filter((a) => state.achievementClaimed[a.id]).length;
+    achBadge.textContent = `ACH ${claimed}/${total}`;
   };
 
   store.subscribe(update);

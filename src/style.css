@@ -114,6 +114,15 @@ body {
   white-space: nowrap;
 }
 
+.badge-ach {
+  font-size: 10px;
+  letter-spacing: 0.12em;
+  color: var(--warn);
+  border: 1px dashed var(--faint);
+  padding: 3px 8px;
+  white-space: nowrap;
+}
+
 /* ---------- Layout ---------- */
 
 #layout {
@@ -156,7 +165,8 @@ body {
 }
 
 .techpane,
-.exchangepane {
+.exchangepane,
+.achpane {
   flex: 1;
   min-height: 0;
   display: flex;
@@ -164,11 +174,12 @@ body {
   overflow: hidden;
 }
 
-.exchangepane {
+.exchangepane,
+.achpane {
   border-top: 1px solid var(--faint);
 }
 
-.exchangepane .card-list {
+.achpane .card-list {
   overflow: auto;
 }
 
@@ -282,6 +293,46 @@ body {
 
 .card--exch .btn {
   flex: 1;
+}
+
+/* ---------- Achievements ---------- */
+
+.card--ach {
+  border-style: dashed;
+}
+
+.card--ready {
+  border-color: var(--line);
+  border-style: solid;
+}
+
+.card--claimed {
+  border-color: var(--faint);
+  opacity: 0.7;
+}
+
+.ach-prog--done {
+  color: var(--line);
+}
+
+.ach-prog--ready {
+  color: var(--warn);
+}
+
+.btn--claim {
+  flex: 1;
+  color: var(--line);
+  border-color: var(--line);
+}
+
+.btn--claim:hover:not(:disabled) {
+  background: var(--hint);
+}
+
+.ach-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .card-lock {

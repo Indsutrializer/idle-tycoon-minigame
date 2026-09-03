@@ -1,6 +1,7 @@
 import { fmtDuration } from './format';
 import { createStore } from './store';
 import { initTooltips } from './ui/dom';
+import { mountAchievements } from './ui/achievements';
 import { mountExchange } from './ui/exchange';
 import { mountHud } from './ui/hud';
 import { mountMap } from './ui/map';
@@ -14,7 +15,7 @@ initTooltips();
 document.getElementById('hud')!.append(mountHud(store));
 document.getElementById('panel')!.append(mountPanel(store));
 document.getElementById('mapview')!.append(mountMap(store));
-document.getElementById('techview')!.append(mountTechTree(store), mountExchange(store));
+document.getElementById('techview')!.append(mountTechTree(store), mountExchange(store), mountAchievements(store));
 
 const status = document.getElementById('status')!;
 const stCap = document.createElement('span');
